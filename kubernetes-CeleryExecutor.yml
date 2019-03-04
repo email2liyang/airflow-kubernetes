@@ -1,0 +1,266 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: airflow
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: airflow
+spec:
+  type: NodePort
+  ports:
+  - name: pgql
+    port: 5432
+    targetPort: 5432
+    protocol: TCP
+  selector:
+    app: postgres
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: airflow
+spec:
+  serviceName: "postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:9.6
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/lib/postgresql/data
+          subPath: pgdata
+        env:
+        - name: POSTGRES_USER
+          value: airflow
+        - name: POSTGRES_PASSWORD
+          value: airflow
+        - name: POSTGRES_DB
+          value: airflow
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        ports:
+        - containerPort: 5432
+      # No pre-stop hook is required, a SIGTERM plus some time is all that's
+      # needed for graceful shutdown of a node.
+      terminationGracePeriodSeconds: 60
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+      - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 1Gi
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: airflow-celery-webserver
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-celery-webserver
+  template:
+    metadata:
+      labels:
+        name: airflow-celery-webserver
+        app: airflow-celery-webserver
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        env:
+        - name: PG_HOST
+          value: postgres
+        - name: PG_PORT
+          value: "5432"
+        command: [ "/bin/sh", "-c", "until nc -zv $PG_HOST $PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+      - name: airflow-celery-webserver
+        image: docker.io/email2liyang/docker-airflow:1.10.2
+        imagePullPolicy: Always
+        env:
+        - name: LOAD_EX
+          value: "n"
+        - name: EXECUTOR
+          value: Celery
+        - name: POSTGRES_HOST
+          value: postgres
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: FERNET_KEY
+          value: 46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+        readinessProbe:
+          httpGet:
+            path: /admin/
+            port: 8080
+          initialDelaySeconds: 8
+          timeoutSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /admin/
+            port: 8080
+          initialDelaySeconds: 8
+          timeoutSeconds: 10
+        ports:
+        - name: webserver
+          containerPort: 8080
+        command: ["/entrypoint.sh"]
+        args: ["webserver"]
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: airflow-celery-scheduler
+  namespace: airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-celery-scheduler
+  template:
+    metadata:
+      labels:
+        name: airflow-celery-scheduler
+        app: airflow-celery-scheduler
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        env:
+        - name: PG_HOST
+          value: postgres
+        - name: PG_PORT
+          value: "5432"
+        command: [ "/bin/sh", "-c", "until nc -zv $PG_HOST $PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+      - name: airflow-celery-scheduler
+        image: docker.io/email2liyang/docker-airflow:1.10.2
+        imagePullPolicy: Always
+        env:
+        - name: LOAD_EX
+          value: "n"
+        - name: EXECUTOR
+          value: Celery
+        - name: POSTGRES_HOST
+          value: postgres
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: FERNET_KEY
+          value: 46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - ps -ef | grep scheduler | grep -v "grep"
+          initialDelaySeconds: 8
+          timeoutSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - ps -ef | grep scheduler | grep -v "grep"
+          initialDelaySeconds: 8
+          timeoutSeconds: 10
+        command: ["/entrypoint.sh"]
+        args: ["scheduler"]
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: airflow-celery-worker
+  namespace: airflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: airflow-celery-worker
+  template:
+    metadata:
+      labels:
+        name: airflow-celery-worker
+        app: airflow-celery-worker
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        env:
+        - name: PG_HOST
+          value: postgres
+        - name: PG_PORT
+          value: "5432"
+        command: [ "/bin/sh", "-c", "until nc -zv $PG_HOST $PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
+      containers:
+      - name: airflow-celery-worker
+        image: docker.io/email2liyang/docker-airflow:1.10.2
+        imagePullPolicy: Always
+        env:
+        - name: LOAD_EX
+          value: "n"
+        - name: EXECUTOR
+          value: Celery
+        - name: POSTGRES_HOST
+          value: postgres
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: FERNET_KEY
+          value: 46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - ps -ef | grep celeryd | grep -v "grep"
+          initialDelaySeconds: 8
+          timeoutSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - ps -ef | grep celeryd | grep -v "grep"
+          initialDelaySeconds: 8
+          timeoutSeconds: 10
+        command: ["/entrypoint.sh"]
+        args: ["worker"]
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-celery-webserver
+  namespace: airflow
+spec:
+  type: NodePort
+  ports:
+  - name: webserver
+    port: 8080
+    targetPort: webserver
+  selector:
+    app: airflow-celery-webserver
