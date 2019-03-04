@@ -32,12 +32,6 @@ if [ -e "/requirements.txt" ]; then
     $(which pip) install --user -r /requirements.txt
 fi
 
-if [ -n "$REDIS_PASSWORD" ]; then
-    REDIS_PREFIX=:${REDIS_PASSWORD}@
-else
-    REDIS_PREFIX=
-fi
-
 wait_for_port() {
   local name="$1" host="$2" port="$3"
   local j=0
