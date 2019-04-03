@@ -9,54 +9,53 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres
+  name: mysql
   namespace: airflow
 spec:
   type: NodePort
   ports:
-  - name: pgql
-    port: 5432
-    targetPort: 5432
+  - name: mysql
+    port: 3306
+    targetPort: 3306
     protocol: TCP
   selector:
-    app: postgres
+    app: mysql
 
 ---
 
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: postgres
+  name: mysql
   namespace: airflow
 spec:
-  serviceName: "postgres"
+  serviceName: "mysql"
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app: mysql
   template:
     metadata:
       labels:
-        app: postgres
+        app: mysql
     spec:
       containers:
-      - name: postgres
-        image: postgres:9.6
+      - name: mysql
+        image: email2liyang/mysql-for-airflow:5.7.24
         volumeMounts:
         - name: datadir
-          mountPath: /var/lib/postgresql/data
-          subPath: pgdata
+          mountPath: /var/lib/mysql
         env:
-        - name: POSTGRES_USER
+        - name: MYSQL_ROOT_PASSWORD
           value: airflow
-        - name: POSTGRES_PASSWORD
+        - name: MYSQL_USER
           value: airflow
-        - name: POSTGRES_DB
+        - name: MYSQL_PASSWORD
           value: airflow
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
+        - name: MYSQL_DATABASE
+          value: airflow
         ports:
-        - containerPort: 5432
+        - containerPort: 3306
       # No pre-stop hook is required, a SIGTERM plus some time is all that's
       # needed for graceful shutdown of a node.
       terminationGracePeriodSeconds: 60
@@ -88,15 +87,6 @@ spec:
         name: airflow-celery-webserver
         app: airflow-celery-webserver
     spec:
-      initContainers:
-      - name: wait-for-postgres
-        image: busybox
-        env:
-        - name: PG_HOST
-          value: postgres
-        - name: PG_PORT
-          value: "5432"
-        command: [ "/bin/sh", "-c", "until nc -zv $PG_HOST $PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: airflow-celery-webserver
         image: docker.io/email2liyang/docker-airflow:1.10.2
@@ -106,10 +96,10 @@ spec:
           value: "n"
         - name: EXECUTOR
           value: Celery
-        - name: POSTGRES_HOST
-          value: postgres
-        - name: POSTGRES_PORT
-          value: "5432"
+        - name: AIRFLOW_MYSQL_DB_HOST
+          value: mysql
+        - name: AIRFLOW_MYSQL_DB_PORT
+          value: "3306"
         - name: FERNET_KEY
           value: 46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
         readinessProbe:
@@ -147,15 +137,6 @@ spec:
         name: airflow-celery-scheduler
         app: airflow-celery-scheduler
     spec:
-      initContainers:
-      - name: wait-for-postgres
-        image: busybox
-        env:
-        - name: PG_HOST
-          value: postgres
-        - name: PG_PORT
-          value: "5432"
-        command: [ "/bin/sh", "-c", "until nc -zv $PG_HOST $PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: airflow-celery-scheduler
         image: docker.io/email2liyang/docker-airflow:1.10.2
@@ -165,10 +146,10 @@ spec:
           value: "n"
         - name: EXECUTOR
           value: Celery
-        - name: POSTGRES_HOST
-          value: postgres
-        - name: POSTGRES_PORT
-          value: "5432"
+        - name: AIRFLOW_MYSQL_DB_HOST
+          value: mysql
+        - name: AIRFLOW_MYSQL_DB_PORT
+          value: "3306"
         - name: FERNET_KEY
           value: 46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
         readinessProbe:
@@ -207,15 +188,6 @@ spec:
         name: airflow-celery-worker
         app: airflow-celery-worker
     spec:
-      initContainers:
-      - name: wait-for-postgres
-        image: busybox
-        env:
-        - name: PG_HOST
-          value: postgres
-        - name: PG_PORT
-          value: "5432"
-        command: [ "/bin/sh", "-c", "until nc -zv $PG_HOST $PG_PORT -w1; do echo 'waiting for db'; sleep 1; done" ]
       containers:
       - name: airflow-celery-worker
         image: docker.io/email2liyang/docker-airflow:1.10.2
@@ -225,10 +197,10 @@ spec:
           value: "n"
         - name: EXECUTOR
           value: Celery
-        - name: POSTGRES_HOST
-          value: postgres
-        - name: POSTGRES_PORT
-          value: "5432"
+        - name: AIRFLOW_MYSQL_DB_HOST
+          value: mysql
+        - name: AIRFLOW_MYSQL_DB_PORT
+          value: "3306"
         - name: FERNET_KEY
           value: 46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
         readinessProbe:
