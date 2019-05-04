@@ -47,6 +47,20 @@ wait_for_port() {
   done
 }
 
+# super init airflow env when user provide airflow init script in fodler 
+airflow_super_init_env() {
+  AIRFLOW_SUPER_INIT_DIR=/usr/local/airflow/config/super_init/
+  if [ ! -d ${AIRFLOW_SUPER_INIT_DIR} ]; then
+      echo "no super init script found , do nothing"
+  else 
+    airflow_super_init_scripts=$(ls ${AIRFLOW_SUPER_INIT_DIR} | grep 'sh')
+
+    for super_init_script in ${airflow_super_init_scripts}; do
+      echo "executing super init script - ${super_init_script}"
+      sudo bash ${AIRFLOW_SUPER_INIT_DIR}/${super_init_script}
+    done
+  fi
+}
 # init airflow env when user provide airflow init script in fodler 
 airflow_init_env() {
   AIRFLOW_INIT_DIR=/usr/local/airflow/config/init/
@@ -75,6 +89,7 @@ fi
 case "$1" in
   webserver)
     airflow initdb
+    airflow_super_init_env
     airflow_init_env
     if [ "$AIRFLOW__CORE__EXECUTOR" = "LocalExecutor" ]; then
       # With the "Local" executor it should all run in one container.
