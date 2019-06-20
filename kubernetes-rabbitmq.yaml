@@ -131,14 +131,20 @@ spec:
           - name: MY_POD_IP
             valueFrom:
               fieldRef:
-                fieldPath: status.podIP     
+                fieldPath: status.podIP
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name           
           - name: RABBITMQ_USE_LONGNAME
             value: "true"
           # See a note on cluster_formation.k8s.address_type in the config file section
           - name: RABBITMQ_NODENAME
-            value: "rabbit@$(MY_POD_IP)"
+            value: "rabbit@$(MY_POD_NAME).rabbitmq.airflow.svc.cluster.local"
           - name: K8S_SERVICE_NAME
             value: "rabbitmq"
+          - name: K8S_HOSTNAME_SUFFIX
+            value: '.rabbitmq.airflow.svc.cluster.local'
           - name: RABBITMQ_ERLANG_COOKIE
             value: "mycookie" 
       volumes:
