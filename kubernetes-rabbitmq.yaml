@@ -106,6 +106,8 @@ spec:
         volumeMounts:
           - name: config-volume
             mountPath: /etc/rabbitmq
+          - name: datadir
+            mountPath: /var/lib/rabbitmq  
         ports:
           - name: http
             protocol: TCP
@@ -156,3 +158,12 @@ spec:
               path: rabbitmq.conf
             - key: enabled_plugins
               path: enabled_plugins
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+      - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 5Gi            
