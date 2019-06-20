@@ -264,7 +264,7 @@ spec:
         imagePullPolicy: Always
         env:
         - name: LOAD_EX
-          value: "n"
+          value: "y"
         - name: EXECUTOR
           value: Celery
         - name: AIRFLOW_MYSQL_DB_HOST
@@ -322,7 +322,7 @@ spec:
         imagePullPolicy: Always
         env:
         - name: LOAD_EX
-          value: "n"
+          value: "y"
         - name: EXECUTOR
           value: Celery
         - name: AIRFLOW_MYSQL_DB_HOST
@@ -380,7 +380,7 @@ spec:
         imagePullPolicy: Always
         env:
         - name: LOAD_EX
-          value: "n"
+          value: "y"
         - name: EXECUTOR
           value: Celery
         - name: AIRFLOW_MYSQL_DB_HOST
@@ -439,7 +439,7 @@ spec:
         imagePullPolicy: Always
         env:
         - name: LOAD_EX
-          value: "n"
+          value: "y"
         - name: EXECUTOR
           value: Celery
         - name: AIRFLOW_MYSQL_DB_HOST
