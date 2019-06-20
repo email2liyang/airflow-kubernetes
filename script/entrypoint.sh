@@ -82,7 +82,7 @@ if [ "$AIRFLOW__CORE__EXECUTOR" != "SequentialExecutor" ]; then
   wait_for_port "MySQL" "$AIRFLOW_MYSQL_DB_HOST" "$AIRFLOW_MYSQL_DB_PORT"
 fi
 
-if [ "$AIRFLOW__CORE__EXECUTOR" = "CeleryExecutor" ]; then
+if [ -z "$AIRFLOW__CELERY__RESULT_BACKEND" && "$AIRFLOW__CORE__EXECUTOR" = "CeleryExecutor" ]; then
   AIRFLOW__CELERY__BROKER_URL="sqla+mysql://$AIRFLOW_MYSQL_DB_USER:$AIRFLOW_MYSQL_DB_PASSWORD@$AIRFLOW_MYSQL_DB_HOST:$AIRFLOW_MYSQL_DB_PORT/$AIRFLOW_MYSQL_DB_NAME"
 fi
 
@@ -95,6 +95,7 @@ case "$1" in
       # With the "Local" executor it should all run in one container.
       airflow scheduler &
     fi
+    echo $AIRFLOW__CELERY__RESULT_BACKEND
     exec airflow webserver
     ;;
   worker|scheduler)
@@ -104,6 +105,7 @@ case "$1" in
     ;;
   flower)
     sleep 10
+    echo $AIRFLOW__CELERY__RESULT_BACKEND
     exec airflow "$@"
     ;;
   version)
