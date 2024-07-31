@@ -1,4 +1,4 @@
-# VERSION 1.10.2
+# VERSION 1.10.3
 # inspect by https://github.com/puckel/docker-airflow
 # make it suitable for kubernetes deployment
 
