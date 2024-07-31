@@ -101,10 +101,14 @@ case "$1" in
   worker|scheduler)
     # To give the webserver time to run initdb.
     sleep 10
+    airflow_super_init_env
+    airflow_init_env
     exec airflow "$@"
     ;;
   flower)
     sleep 10
+    airflow_super_init_env
+    airflow_init_env
     echo $AIRFLOW__CELERY__RESULT_BACKEND
     exec airflow "$@"
     ;;
